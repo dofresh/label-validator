@@ -1,0 +1,7 @@
+streamlit
+pandas
+pdfplumber
+openai
+langchain-google-genai
+langchain-community
+openpyxl
