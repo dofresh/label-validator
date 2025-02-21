@@ -1,9 +1,10 @@
-# classes/ui.py
+# classes/ui.py (일부)
 import streamlit as st
 import pandas as pd
 from .extractor import ExcelExtractor, PDFExtractor
 from .comparator import AIComparator
 from .label_validator import LabelValidator
+from .local_storage import load_mapping_from_file, save_mapping_to_file
 
 class CrossValidationUI:
     def __init__(self, assistant):
@@ -31,12 +32,21 @@ class CrossValidationUI:
             key = pdf.name.rsplit(".", 1)[0]
             pdf_file_dict[key] = pdf
 
+        # st.session_state를 이용하여 매핑 정보를 자동으로 불러오기
+        if "mapping" not in st.session_state:
+            st.session_state.mapping = load_mapping_from_file()
+
+        stored_mapping = st.session_state.mapping  # 파일에 저장된 매핑 또는 빈 dict
+
         st.sidebar.header("시트 - PDF 매핑 설정")
         mapping = {}
         for sheet in sheet_names:
             default_option = "None"
             options = ["None"] + list(pdf_file_dict.keys())
-            if sheet in pdf_file_dict:
+            # 저장된 매핑이 있으면 기본값으로 사용
+            if sheet in stored_mapping and stored_mapping[sheet] in options:
+                default_option = stored_mapping[sheet]
+            elif sheet in pdf_file_dict:
                 default_option = sheet
             mapping[sheet] = st.sidebar.selectbox(
                 f"'{sheet}' 시트에 매핑할 PDF 파일 선택",
@@ -44,6 +54,9 @@ class CrossValidationUI:
                 index=options.index(default_option),
                 key=f"map_{sheet}"
             )
+        # 변경된 매핑 정보를 세션에 저장하고 파일에도 저장
+        st.session_state.mapping = mapping
+        save_mapping_to_file(mapping)
         return sheet_names, mapping, pdf_file_dict
 
     def render_results(self, excel_file, sheet_names, mapping, pdf_file_dict):
